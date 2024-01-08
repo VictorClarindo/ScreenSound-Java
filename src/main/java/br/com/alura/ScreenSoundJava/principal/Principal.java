@@ -4,6 +4,7 @@ import br.com.alura.ScreenSoundJava.model.Artista;
 import br.com.alura.ScreenSoundJava.model.Categoria;
 import br.com.alura.ScreenSoundJava.model.Musica;
 import br.com.alura.ScreenSoundJava.repository.ArtistaRepository;
+import br.com.alura.ScreenSoundJava.service.ConsultaChatGPT;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -77,7 +78,7 @@ public class Principal {
             System.out.println("Informe o tipo desse artista: (solo, dupla, banda)\n");
             var tipo = scanner.nextLine();
 
-            Categoria categoria = Categoria.fromPortugues(tipo);
+            Categoria categoria = Categoria.valueOf(tipo.toUpperCase());
             Artista artista = new Artista(nome, categoria);
 
             repositorio.save(artista);
@@ -97,14 +98,12 @@ public class Principal {
         System.out.println("Escolha um artista para adicionar uma música: ");
         var nomeArtista = scanner.nextLine();
 
-        Optional<Artista> artista = artistasList.stream()
-                .filter(a -> a.getNome().toLowerCase().contains(nomeArtista.toLowerCase()))
-                .findFirst();
+        Optional<Artista> artista = repositorio.findByNomeContainingIgnoreCase(nomeArtista);
 
         if(artista.isPresent()){
-            System.out.println("Digite uma música do artista " + artista.get().getNome());
+            System.out.println("Digite uma música de " + artista.get().getNome());
             var nomeMusica = scanner.nextLine();
-            Musica musica = new Musica(nomeMusica);
+            Musica musica = new Musica(nomeMusica, artista.get());
 
             artista.get().setMusicas(musica);
             repositorio.save(artista.get());
@@ -115,31 +114,34 @@ public class Principal {
     }
 
     private void listarMusicas() {
+        var artistas = repositorio.findAll();
+        System.out.println("Listando todas as músicas:\n");
+        artistas.forEach(a -> System.out.println(a.getMusicas()));
+    }
+
+    private void buscarMusicaPorArtista() {
         System.out.println("\nGostaria de ver músicas de qual artista?");
         var artistas = repositorio.findAll();
         artistas.forEach(a -> System.out.println(a.getNome()));
 
         var nomeArtista = scanner.nextLine();
-        var artistaBusca = repositorio.findByNomeContainingIgnoreCase(nomeArtista);
-        if(artistaBusca.isPresent()){
-            List<Musica> musicas = artistaBusca.get().getMusicas()
-                    .stream()
-                    .map(m -> new Musica(m.getNome()))
-                    .collect(Collectors.toList());
-            System.out.println("\nMusicas de " + artistaBusca.get().getNome());
-            System.out.println(musicas);
+        Optional<Artista> artista = repositorio.encontrarArtista(nomeArtista);
+
+        if(artista.isPresent()){
+            var musicasArtista = repositorio.buscarMusicaPorArtista(artista.get());
+            System.out.println("\nMusicas de " + artista.get().getNome() + ":\n");
+            musicasArtista.forEach(m -> System.out.println(m.getNome()));
         } else{
             System.out.println("Artista não encontrado!");
         }
-    }
-
-    private void buscarMusicaPorArtista() {
-
-
 
     }
 
     private void pesquisarDados() {
+        System.out.println("Pesquisar dados sobre qual artista? ");
+        var nome = scanner.nextLine();
+        var resposta = ConsultaChatGPT.obterInformacao(nome);
+        System.out.println(resposta.trim());
 
     }
 }

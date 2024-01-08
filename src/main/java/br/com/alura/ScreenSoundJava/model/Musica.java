@@ -15,8 +15,9 @@ public class Musica {
     private Artista artista;
 
     public Musica(){}
-    public Musica(String nome) {
+    public Musica(String nome, Artista cantor) {
         this.nome = nome;
+        this.artista = cantor;
     }
 
     public String getNome() {
